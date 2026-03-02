@@ -26,6 +26,8 @@ M17_USER="m17"
 NGINX_DEFAULT="/etc/nginx/sites-enabled/default"
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
 HOSTFILE_URL="https://hostfiles.refcheck.radio/M17Hosts.txt"
+OVERLAYS_DIR="/boot/firmware/overlays"
+I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
 # ------------------------------------------------
 
 set -e
@@ -115,6 +117,20 @@ while getopts "n" opt; do
     esac
 done
 
+# Ask user for HAT type
+echo "Please select your HAT type:"
+echo "1) CC1200"
+echo "2) SX1255"
+echo "3) MMDVM"
+read -rp "Enter your choice (1-3): " HAT_CHOICE
+case $HAT_CHOICE in
+    1) HAT_TYPE="CC1200" ;;
+    2) HAT_TYPE="SX1255" ;;
+    3) HAT_TYPE="MMDVM" ;;
+    *) echo "❌ Invalid choice."; exit 1 ;;
+esac
+echo "Selected HAT type: $HAT_TYPE"
+
 # Update and check if reboot is needed
 echo "📦 Updating system packages..."
 apt update && apt -y dist-upgrade
@@ -125,7 +141,7 @@ if [ -f /var/run/reboot-required ]; then
     exit 0
 fi
 
-# Ensure UART config is correct
+# Configure boot settings based on HAT type
 CONFIG_CHANGED=false
 
 if ! grep -q "^dtoverlay=miniuart-bt" "$BOOT_CONFIG_FILE"; then
@@ -141,6 +157,30 @@ fi
 if grep -q "console=serial0,115200" "$CMDLINE_FILE"; then
     sed -i 's/console=serial0,115200 *//' "$CMDLINE_FILE"
     CONFIG_CHANGED=true
+fi
+
+if [ "$HAT_TYPE" = "SX1255" ]; then
+    # Ensure SPI and I2S are enabled for SX1255 HAT
+    if ! grep -q "^dtparam=spi=on" "$BOOT_CONFIG_FILE"; then
+        echo "dtparam=spi=on" >> "$BOOT_CONFIG_FILE"
+        CONFIG_CHANGED=true
+    fi
+
+    if ! grep -q "^dtparam=i2s=on" "$BOOT_CONFIG_FILE"; then
+        echo "dtparam=i2s=on" >> "$BOOT_CONFIG_FILE"
+        CONFIG_CHANGED=true
+    fi
+
+    # Download and enable I2S audio codec overlay
+    if [ ! -f "$OVERLAYS_DIR/genericstereoaudiocodec.dtbo" ]; then
+        echo "📥 Downloading I2S audio codec overlay..."
+        curl -L -o "$OVERLAYS_DIR/genericstereoaudiocodec.dtbo" "$I2S_OVERLAY_URL"
+    fi
+
+    if ! grep -q "^dtoverlay=genericstereoaudiocodec" "$BOOT_CONFIG_FILE"; then
+        echo "dtoverlay=genericstereoaudiocodec" >> "$BOOT_CONFIG_FILE"
+        CONFIG_CHANGED=true
+    fi
 fi
 
 if $CONFIG_CHANGED; then
@@ -212,15 +252,17 @@ if [ $? -eq 0 ]; then
 fi
 set -e
 
-# Optionally flash firmware
-case $flash in
-    n) ;;
-    *) read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
-        if [[ "$FLASH_CONFIRM" == "Y" || "$FLASH_CONFIRM" == "y" ]]; then
-            flash_firmware
-        fi
-    ;;
-esac
+# Optionally flash firmware (not applicable for SX1255)
+if [ "$HAT_TYPE" != "SX1255" ]; then
+    case $flash in
+        n) ;;
+        *) read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
+            if [[ "$FLASH_CONFIRM" == "Y" || "$FLASH_CONFIRM" == "y" ]]; then
+                flash_firmware
+            fi
+        ;;
+    esac
+fi
 
 # Install dashboard
 sudo -u "$M17_USER" bash <<EOF
@@ -306,6 +348,11 @@ fi
 echo "👥 Adding 'www-data' to 'm17-gateway-control' group..."
 usermod -aG m17-gateway-control www-data
 
+if [ "$HAT_TYPE" = "SX1255" ]; then
+    echo "👥 Adding 'm17-gateway' to 'spi' and 'audio' groups..."
+    usermod -aG spi,audio m17-gateway
+fi
+
 echo "🚚 Moving host files to dashboard..."
 if [ ! -f /opt/m17/rpi-dashboard/files/OverrideHosts.txt ]; then
     mv /opt/m17/m17-gateway/OverrideHosts.txt /opt/m17/rpi-dashboard/files/
@@ -344,9 +391,10 @@ fi
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 
 # Final Instructions
-echo -e "\n🎉 All done! If this is a new installation, PLEASE REBOOT YOUR RASPBERRY NOW!"
-echo -e "\nTo access the dashboard go to: http://$IP_ADDRESS/ or http://$(hostname).local/"
-echo -e "\nThere, to configure your node (call sign, frequency etc), click on 'Gateway Config'."
-echo -e "\nIf you have an MMDVM HAT, you must make configuration changes before it will work!"
-echo -e "\nSee the README for details: https://github.com/M17-Project/cc1200-hotspot-installer/tree/main#mmdvm-configuration"
+echo -e "\n🎉 All done!"
+echo -e "\n* If this is a new installation, PLEASE REBOOT YOUR RASPBERRY PI NOW!"
+echo -e "\n* To access the dashboard go to: http://$IP_ADDRESS/ or http://$(hostname).local/"
+echo -e "  There, to configure your node (call sign, frequency etc), click on 'Gateway Config'."
+echo -e "\n* If you have an SX1255 or MMDVM HAT, you must make configuration changes before it will work!"
+echo -e "  See the README for details: https://github.com/M17-Project/m17-hotspot-installer/tree/main#sx1255-configuration"
 echo -e "\nYou will find further information under 'Help' in the dashboard."
