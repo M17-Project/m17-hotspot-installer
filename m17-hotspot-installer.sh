@@ -25,7 +25,7 @@ M17_HOME="/opt/m17"
 M17_USER="m17"
 NGINX_DEFAULT="/etc/nginx/sites-enabled/default"
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
-HOSTFILE_URL="https://hostfiles.refcheck.radio/M17Hosts.txt"
+HOSTFILE_URL="https://m17-project.github.io/hostfiles/M17_Hosts.txt"
 OVERLAYS_DIR="/boot/firmware/overlays"
 I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
 # ------------------------------------------------
@@ -43,19 +43,13 @@ update_hostfile() {
     chown "$M17_USER:www-data" $FILES_DIR
     chmod 775 $FILES_DIR
 
-    # Don't refresh if the file is less than 2 hours old
-    if ! [ -f $M17_HOSTS ] || [ $(find $M17_HOSTS -cmin +120) ]; then
-        # echo "Deleting $M17_HOSTS"
-        # rm -f $M17_HOSTS
+    echo "Downloading hostfile to $M17_HOSTS"
+    /usr/bin/curl $HOSTFILE_URL -o $M17_HOSTS -z $M17_HOSTS -A "m17-hotspot-installer Hostfile Updater"
 
-        echo "Downloading hostfile to $M17_HOSTS"
-        /usr/bin/curl $HOSTFILE_URL -o $M17_HOSTS -A "rpi-dashboard Hostfile Updater"
-
-        echo "Setting ownership and permissions of $M17_HOSTS"
-        if [ -f $M17_HOSTS ]; then
-            chown "$M17_USER:www-data" $M17_HOSTS
-            chmod 664 $M17_HOSTS
-        fi
+    echo "Setting ownership and permissions of $M17_HOSTS"
+    if [ -f $M17_HOSTS ]; then
+        chown "$M17_USER:www-data" $M17_HOSTS
+        chmod 664 $M17_HOSTS
     fi
 }
 
