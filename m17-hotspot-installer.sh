@@ -25,7 +25,7 @@ M17_HOME="/opt/m17"
 M17_USER="m17"
 NGINX_DEFAULT="/etc/nginx/sites-enabled/default"
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
-HOSTFILE_URL="https://m17-project.github.io/hostfiles/M17_Hosts.txt"
+HOSTFILE_URL="https://m17-project.github.io/hostfiles/M17Hosts.txt"
 OVERLAYS_DIR="/boot/firmware/overlays"
 I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
 # ------------------------------------------------
