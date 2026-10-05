@@ -299,6 +299,11 @@ server {
                 try_files $uri $uri/ =404;
         }
 
+        # The dashboard reads these files itself; don't serve them
+        location ^~ /files/ {
+                deny all;
+        }
+
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/var/run/php/php-fpm.sock;
@@ -307,6 +312,17 @@ server {
 EOF
     echo "🔁 Restarting nginx..."
     systemctl restart nginx
+elif ! grep -q 'location \^~ /files/' "$NGINX_DEFAULT"; then
+    # Existing installation: stop serving the dashboard's files/ directory
+    echo "🛠️  Blocking web access to the dashboard's files/ directory..."
+    cp "$NGINX_DEFAULT" /tmp/nginx-default.bak
+    sed -i 's|^\([[:space:]]*\)root /opt/m17/rpi-dashboard;|&\n\1location ^~ /files/ {\n\1        deny all;\n\1}|' "$NGINX_DEFAULT"
+    if nginx -t 2>/dev/null; then
+        systemctl reload nginx
+    else
+        echo "⚠️  nginx rejected the change, restoring the previous configuration"
+        cp /tmp/nginx-default.bak "$NGINX_DEFAULT"
+    fi
 fi
 
 # Install M17 Gateway and configure links
@@ -354,9 +370,14 @@ if [ ! -f /opt/m17/rpi-dashboard/files/OverrideHosts.txt ]; then
     chmod 664 /opt/m17/rpi-dashboard/files/OverrideHosts.txt
 fi
 
-echo "Making /opt/m17/rpi-dashboard/ writable for www-data..."
+# The web server may write only config.php and files/, not the dashboard code
+echo "Setting dashboard permissions for www-data..."
 chgrp -R www-data /opt/m17/rpi-dashboard/
-chmod -R g+w /opt/m17/rpi-dashboard/
+chmod -R g-w /opt/m17/rpi-dashboard/
+touch /opt/m17/rpi-dashboard/config.php
+chgrp www-data /opt/m17/rpi-dashboard/config.php
+chmod 664 /opt/m17/rpi-dashboard/config.php
+chmod -R g+w /opt/m17/rpi-dashboard/files/
 
 if ! grep -q 'HostFile=/opt/m17/rpi-dashboard/files/M17Hosts.txt' /etc/m17-gateway.ini; then
     echo "Updating m17-gateway.ini..."
@@ -374,6 +395,19 @@ ln -sf /etc/m17-gateway.ini /opt/m17/rpi-dashboard/files/m17-gateway.ini
 if [ -f $M17_HOME/m17-gateway/dashboard.log ]; then
     # Ensure dashboard.log is accessible
     chmod 644 $M17_HOME/m17-gateway/dashboard.log
+fi
+
+# The dashboard's configuration pages need an admin password
+if ! grep -q "'admin_password_hash' => '[^']" /opt/m17/rpi-dashboard/config.php 2>/dev/null; then
+    if [ -t 0 ]; then
+        echo "🔐 Choose a password for the dashboard's configuration pages (at least 8 characters)."
+        until sudo -u www-data php /opt/m17/rpi-dashboard/set_password.php; do
+            echo "Please try again."
+        done
+    else
+        echo "⚠️  No dashboard admin password is set. Set one with:"
+        echo "   sudo -u www-data php /opt/m17/rpi-dashboard/set_password.php"
+    fi
 fi
 
 # Restart m17-gateway if we stopped it
