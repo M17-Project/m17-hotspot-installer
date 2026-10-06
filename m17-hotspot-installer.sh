@@ -26,6 +26,7 @@ M17_USER="m17"
 NGINX_DEFAULT="/etc/nginx/sites-enabled/default"
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
 HOSTFILE_URL="https://m17-project.github.io/hostfiles/M17Hosts.txt"
+INSTALLER_URL="https://raw.githubusercontent.com/M17-Project/m17-hotspot-installer/main/m17-hotspot-installer.sh"
 OVERLAYS_DIR="/boot/firmware/overlays"
 I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
 # ------------------------------------------------
@@ -87,7 +88,61 @@ flash_firmware() {
 }
 
 usage() {
-    echo "Usage: sudo $0 [-n]"
+    echo "Usage: sudo $0 [-n] [-u]"
+    echo "  -n  don't flash the HAT firmware"
+    echo "  -u  don't check for a newer version of this installer"
+}
+
+# Offer to switch to the latest installer from GitHub, so a re-run always
+# sets up everything the current dashboard and gateway need. Any problem
+# (no network, broken download, piped script) just continues with this copy.
+self_update() {
+    local self new answer
+    self=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null) || return 0
+    [ -f "$self" ] || return 0
+    command -v curl > /dev/null || return 0
+
+    # Download next to this script, so the final mv is an atomic rename
+    # and never overwrites the file bash is still reading from
+    new=$(mktemp "$(dirname "$self")/.m17-hotspot-installer.XXXXXX" 2>/dev/null) || return 0
+    if ! curl -fsSL --max-time 30 "$INSTALLER_URL" -o "$new"; then
+        echo "⚠️  Could not check for a newer installer, continuing with this one."
+        rm -f "$new"
+        return 0
+    fi
+    if ! head -n 1 "$new" | grep -q '^#!/bin/bash' || ! bash -n "$new" 2>/dev/null; then
+        echo "⚠️  The downloaded installer looks incomplete, continuing with this one."
+        rm -f "$new"
+        return 0
+    fi
+    if cmp -s "$new" "$self"; then
+        rm -f "$new"
+        return 0
+    fi
+
+    echo "🆕 A newer version of this installer is available."
+    if [ -t 0 ]; then
+        read -rp "Download it and use it now? (Y/n): " answer || answer=n
+    else
+        answer=n
+    fi
+    case "$answer" in
+        [nN]*)
+            echo "Continuing with this version."
+            rm -f "$new"
+            return 0
+            ;;
+    esac
+
+    chown --reference="$self" "$new" 2>/dev/null || true
+    chmod --reference="$self" "$new" 2>/dev/null || chmod 755 "$new"
+    if ! mv "$new" "$self"; then
+        echo "⚠️  Could not replace $self, continuing with this one."
+        rm -f "$new"
+        return 0
+    fi
+    echo "🔁 Restarting with the new installer..."
+    exec bash "$self" -u "$@"
 }
 
 # Must be run as root
@@ -103,13 +158,18 @@ if ! grep -q "trixie\|bookworm" /etc/os-release; then
     exit 1
 fi
 
-# Check for -n (don't flash) option
-while getopts "n" opt; do
+# Check for -n (don't flash) and -u (don't update the installer) options
+while getopts "nu" opt; do
     case $opt in
         n) flash='n' ;;
+        u) no_self_update='y' ;;
         *) usage; exit 1 ;;
     esac
 done
+
+if [ "$no_self_update" != "y" ]; then
+    self_update "$@"
+fi
 
 # Ask user for HAT type
 echo "Please select your HAT type:"
