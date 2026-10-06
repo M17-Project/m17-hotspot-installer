@@ -89,27 +89,24 @@ This service will connect you to the M17 reflector of your choice and writes all
 
 To access the dashboard, simply navigate your browser to _http://<IP_OF_YOUR_RPI>_.
 
-The default configuration after installation works for CC1200 HATs. You will have to make config changes for SX1255 or MMDVM hardware.
+The installer sets *Modem / Type* to match the HAT you select. If you change the HAT later, update *Type* on the Gateway page (`cc1200`, `sx1255` or `mmdvm`) or re-run the installer. With an SX1255 or MMDVM HAT, also check the settings below.
 
 ### SX1255 Configuration
 
-The following fields in Gateway Config may have to be changed for the SX1255:
+The following fields on the Gateway page may have to be changed for the SX1255:
 
 * Under *Radio*:
   * For duplex operation, *Duplex* must be set to `true`.
   * To run in Duplex mode, the *RXFrequency* and *TXFrequency* must be different.
-* Under *Modem*:
-  * *Type* must be set to `sx1255`.
 
 ### MMDVM Configuration
 
-The following fields in Gateway Config may have to be changed for MMDVM:
+The following fields on the Gateway page may have to be changed for MMDVM:
 
 * Under *Radio*:
   * To run a Duplex HAT in duplex mode, *Duplex* must be set to `true`.
   * To run in Duplex mode, the *RXFrequency* and *TXFrequency* must be different.
 * Under *Modem*:
-  * *Type* must be set to `mmdvm`.
   * *Baud Rate* may need to be changed to the value the HAT supports, often `115200` for hotspots.
 
 ---

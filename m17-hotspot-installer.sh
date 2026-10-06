@@ -407,6 +407,19 @@ if ! grep -q 'HostFile=/opt/m17/rpi-dashboard/files/M17Hosts.txt' /etc/m17-gatew
     cp /tmp/m17-gateway.ini /etc/m17-gateway.ini
 fi
 
+# Set the modem type in the [Modem] section to match the selected HAT.
+# Only the Type line changes; a CC1200 variant such as cc1200v2 is kept.
+MODEM_TYPE=$(echo "$HAT_TYPE" | tr '[:upper:]' '[:lower:]')
+echo "Setting modem type '$MODEM_TYPE' in m17-gateway.ini..."
+awk -v t="$MODEM_TYPE" '
+    /^[[:space:]]*\[/ { section = $0; gsub(/[][[:space:]]/, "", section) }
+    section == "Modem" && /^[[:space:]]*Type[[:space:]]*=/ {
+        if (!(t == "cc1200" && $0 ~ /=[[:space:]]*cc1200/)) $0 = "Type=" t
+    }
+    { print }
+' /etc/m17-gateway.ini > /tmp/m17-gateway.ini
+cp /tmp/m17-gateway.ini /etc/m17-gateway.ini
+
 echo "🔗 Creating symlinks to expose gateway data to dashboard..."
 ln -sf /opt/m17/m17-gateway/dashboard.log /opt/m17/rpi-dashboard/files/dashboard.log
 ln -sf /etc/m17-gateway.ini /opt/m17/rpi-dashboard/files/m17-gateway.ini
@@ -441,7 +454,7 @@ IP_ADDRESS=$(hostname -I | awk '{print $1}')
 echo -e "\n🎉 All done!"
 echo -e "\n* If this is a new installation, PLEASE REBOOT YOUR RASPBERRY PI NOW!"
 echo -e "\n* To access the dashboard go to: http://$IP_ADDRESS/ or http://$(hostname).local/"
-echo -e "  There, to configure your node (call sign, frequency etc), click on 'Gateway Config'."
-echo -e "\n* If you have an SX1255 or MMDVM HAT, you must make configuration changes before it will work!"
+echo -e "  There, to configure your node (call sign, frequency etc), click on 'Gateway'."
+echo -e "\n* The modem type has been set to '$MODEM_TYPE'. If you have an SX1255 or MMDVM HAT, check the other settings, e.g. duplex mode."
 echo -e "  See the README for details: https://github.com/M17-Project/m17-hotspot-installer/tree/main#sx1255-configuration"
 echo -e "\nYou will find further information under 'Help' in the dashboard."
