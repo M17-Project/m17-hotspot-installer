@@ -34,6 +34,7 @@ sudo ./m17-hotspot-installer.sh
   - [rpi-dashboard](https://github.com/M17-Project/rpi-dashboard) (web interface)
 - Installs [m17-gateway](https://github.com/jancona/m17)
 - Configures NGINX and PHP-FPM to serve the dashboard
+- Allows the dashboard to reboot and shut down the Raspberry Pi (Settings page, Device control)
 - Optionally flashes/updates the CC1200 or MMDVM HAT firmware via stm32flash
 - Script may be re-run to update software to the latest version
 

@@ -358,6 +358,25 @@ fi
 echo "👥 Adding 'www-data' to 'm17-gateway-control' group..."
 usermod -aG m17-gateway-control www-data
 
+# Let the dashboard's Device control buttons reboot and shut down the Pi.
+# Only www-data gets this, and shutdown inhibitors (e.g. a running package
+# upgrade) are still respected. Rewritten on every run to keep it current.
+echo "🔌 Allowing the dashboard to reboot and shut down the Raspberry Pi..."
+mkdir -p /etc/polkit-1/rules.d
+tee /etc/polkit-1/rules.d/58-m17-dashboard-power.rules > /dev/null << 'EOF'
+// Allow the M17 dashboard (running as www-data) to reboot and shut down
+polkit.addRule(function(action, subject) {
+    if (subject.user == "www-data" &&
+        (action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+         action.id == "org.freedesktop.login1.power-off" ||
+         action.id == "org.freedesktop.login1.power-off-multiple-sessions")) {
+        return polkit.Result.YES;
+    }
+});
+EOF
+chmod 644 /etc/polkit-1/rules.d/58-m17-dashboard-power.rules
+
 if [ "$HAT_TYPE" = "SX1255" ]; then
     echo "👥 Adding 'm17-gateway' to 'spi' and 'audio' groups..."
     usermod -aG spi,audio m17-gateway
