@@ -65,7 +65,7 @@ Other Pi models or OS versions may work but are **not officially supported**.
 - `/opt/m17/` - Main working directory for M17-related repositories
 - `/opt/m17/rpi-dashboard/` - Web interface root (served by NGINX)
 - `/opt/m17/m17-gateway/` - m17-gateway installation root
-- `/etc/rpi-gateway.ini` - Gateway configuration file
+- `/etc/m17-gateway.ini` - Gateway configuration file
 - `/boot/firmware/config.txt` - UART settings applied here
 
 ---
