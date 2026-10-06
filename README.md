@@ -21,8 +21,8 @@ sudo ./m17-hotspot-installer.sh
 
 ## Features
 
-- Verifies root and OS requirements
-- Ensures it's run on a **fresh install** of Raspberry Pi OS Lite (64-bit), Bookworm or Trixie
+- Verifies root and OS requirements (Bookworm or Trixie, 64-bit)
+- Intended for a **fresh install** of Raspberry Pi OS Lite (64-bit), Bookworm or Trixie
 - Configures UART for GPIO access
 - Prompts for required reboots after system update and boot option changes
 - Installs all necessary packages via APT

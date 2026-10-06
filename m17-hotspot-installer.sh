@@ -158,6 +158,12 @@ if ! grep -q "trixie\|bookworm" /etc/os-release; then
     exit 1
 fi
 
+# The m17-gateway package is built for 64-bit ARM only
+if [ "$(dpkg --print-architecture)" != "arm64" ]; then
+    echo "❌ This script requires the 64-bit version of Raspberry Pi OS."
+    exit 1
+fi
+
 # Check for -n (don't flash) and -u (don't update the installer) options
 while getopts "nu" opt; do
     case $opt in
@@ -191,7 +197,7 @@ apt update && apt -y dist-upgrade
 
 if [ -f /var/run/reboot-required ]; then
     echo "🔁 A system reboot is required to continue."
-    echo "ℹ️  Please reboot the system, rerun this script and select 1) (Fresh Setup) again."
+    echo "ℹ️  Please reboot the system and run this script again."
     exit 0
 fi
 
