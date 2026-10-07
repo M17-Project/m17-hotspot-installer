@@ -241,10 +241,20 @@ if [ "$HAT_TYPE" = "SX1255" ]; then
         echo "dtoverlay=genericstereoaudiocodec" >> "$BOOT_CONFIG_FILE"
         CONFIG_CHANGED=true
     fi
+
+    # Turn off HDMI audio. Its sound device comes before the SX1255's and its
+    # name also contains "i2s", so m17-gateway could pick it for transmit.
+    # A hotspot has no use for HDMI audio anyway.
+    if grep -Eq '^dtoverlay=vc4-f?kms-v3d' "$BOOT_CONFIG_FILE" &&
+       grep -E '^dtoverlay=vc4-f?kms-v3d' "$BOOT_CONFIG_FILE" | grep -vq 'noaudio'; then
+        echo "🔇 Disabling HDMI audio..."
+        sed -i -E '/noaudio/!s/^(dtoverlay=vc4-f?kms-v3d[^[:space:]#]*)/\1,noaudio/' "$BOOT_CONFIG_FILE"
+        CONFIG_CHANGED=true
+    fi
 fi
 
 if $CONFIG_CHANGED; then
-    echo "⚙️  UART configuration updated. A reboot is required."
+    echo "⚙️  Boot configuration updated. A reboot is required."
     echo "🔁 Please reboot the system and rerun this script."
     exit 0
 fi

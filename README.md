@@ -99,6 +99,10 @@ The following fields on the Gateway page may have to be changed for the SX1255:
 * Under *Radio*:
   * For duplex operation, *Duplex* must be set to `true`.
   * To run in Duplex mode, the *RXFrequency* and *TXFrequency* must be different.
+* Under *Modem*:
+  * *ALSACaptureDevice* and *ALSAPlaybackDevice* can normally stay blank: m17-gateway then finds the SX1255's sound card itself. To choose a device, pick it from the list on the Gateway page.
+
+For SX1255 HATs, the installer turns off HDMI audio, so that m17-gateway cannot pick the HDMI output for transmitting.
 
 ### MMDVM Configuration
 
