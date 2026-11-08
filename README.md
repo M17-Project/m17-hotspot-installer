@@ -1,6 +1,6 @@
 # M17 CC1200/SX1255/MMDVM Hotspot Installation Script
 
-This repository contains a Bash script to convert a Raspberry Pi (with a CC1200, SX1255 or MMDVM hat) into a fully functional **M17 digital voice hotspot**. The script automates the entire installation and setup process, including compiling the necessary software, configuring UART, setting up the web dashboard, and flashing the firmware to the HAT (optional).
+This repository contains a Bash script to convert a Raspberry Pi (with a CC1200, SX1255 or MMDVM hat) into a fully functional **M17 digital voice hotspot**. The script automates the entire installation and setup process, including configuring UART, installing the gateway, setting up the web dashboard, and updating the HAT's firmware (optional).
 
 ## Install Script Usage
 
@@ -17,6 +17,14 @@ chmod u+x m17-hotspot-installer.sh
 sudo ./m17-hotspot-installer.sh
 ```
 
+Options:
+
+- `-n` don't flash the HAT firmware
+- `-f` offer to flash the HAT firmware even if it is up to date
+- `-u` don't check for a newer version of the installer
+
+At every prompt, pressing Enter picks the default, shown in capitals: `(Y/n)` means yes, `(y/N)` means no.
+
 ## Features
 
 - Verifies root and OS requirements (Bookworm or Trixie, 64-bit)
@@ -25,15 +33,15 @@ sudo ./m17-hotspot-installer.sh
 - Prompts for required reboots after system update and boot option changes
 - Installs all necessary packages via APT
 - Creates a dedicated _m17_ user for running services
-- Clones and compiles the following M17 Project repositories:
-  - [CC1200_HAT-fw](https://github.com/M17-Project/CC1200_HAT-fw) (firmware flashing optional)
-  - [MMDVM](https://github.com/M17-Project/MMDVM) (firmware flashing optional)
-  - [MMDVM_HS](https://github.com/M17-Project/MMDVM_HS) (firmware flashing optional)
+- Clones the following M17 Project repositories:
+  - [MMDVM](https://github.com/M17-Project/MMDVM) and [MMDVM_HS](https://github.com/M17-Project/MMDVM_HS) (prebuilt MMDVM firmware)
   - [rpi-dashboard](https://github.com/M17-Project/rpi-dashboard) (web interface)
+- Downloads the latest [CC1200_HAT-fw](https://github.com/M17-Project/CC1200_HAT-fw/releases) release for CC1200 HATs
 - Installs [m17-gateway](https://github.com/jancona/m17)
 - Configures NGINX and PHP-FPM to serve the dashboard
 - Allows the dashboard to reboot and shut down the Raspberry Pi (Settings page, Device control)
-- Optionally flashes/updates the CC1200 or MMDVM HAT firmware via stm32flash
+- Identifies a CC1200 or MMDVM HAT and suggests its type
+- Reads the HAT's firmware version and offers an update via stm32flash only when a newer one is available (see `-f` and `-n` above). MMDVM_HS_Hat and MMDVM_HS_Dual_Hat boards get the right firmware file automatically; for other MMDVM boards, you choose it from a list
 - Script may be re-run to update software to the latest version
 - Checks for a newer version of itself on each run and offers to use it
 
@@ -76,11 +84,11 @@ To start _m17-gateway_ manually, just execute the following line:
 sudo systemctl start m17-gateway.service
 ```
 
-This service will connect you to the M17 reflector of your choice and writes all available info to the console.
+This service will connect you to the M17 reflector of your choice. Its log can be followed with `journalctl -u m17-gateway -f`.
 
 To access the dashboard, simply navigate your browser to _http://<IP_OF_YOUR_RPI>_.
 
-The installer sets *Modem / Type* to match the HAT you select. If you change the HAT later, update *Type* on the Gateway page (`cc1200`, `sx1255` or `mmdvm`) or re-run the installer. With an SX1255 or MMDVM HAT, also check the settings below.
+The installer sets *Modem / Type* to match the HAT you select. If you change the HAT later, update *Type* on the Gateway page (`cc1200`, `sx1255` or `mmdvm`) or re-run the installer, which suggests the HAT it finds. With an SX1255 or MMDVM HAT, also check the settings below.
 
 ### SX1255 Configuration
 
@@ -102,7 +110,7 @@ The following fields on the Gateway page may have to be changed for MMDVM:
   * To run a Duplex HAT in duplex mode, *Duplex* must be set to `true`.
   * To run in Duplex mode, the *RXFrequency* and *TXFrequency* must be different.
 * Under *Modem*:
-  * *Baud Rate* may need to be changed to the value the HAT supports, often `115200` for hotspots.
+  * *Speed* (the serial port's baud rate) may need to be changed to the value the HAT supports, often `115200` for hotspots.
 
 ## Disclaimer
 
