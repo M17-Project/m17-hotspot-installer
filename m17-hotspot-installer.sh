@@ -2,7 +2,7 @@
 #
 # m17-hotspot-installer.sh - M17 Hotspot Installation Script for Raspberry Pi with CC1220 or MMDVM HAT
 #
-# Author: DK1MI <dk1mi@qrz.is>
+# Authors: DK1MI <dk1mi@qrz.is>, N1ADJ, SP5WWP
 # License: GNU General Public License v3.0 (GPLv3)
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@ HOSTFILE_URL="https://m17-project.github.io/hostfiles/M17Hosts.txt"
 INSTALLER_URL="https://raw.githubusercontent.com/M17-Project/m17-hotspot-installer/main/m17-hotspot-installer.sh"
 OVERLAYS_DIR="/boot/firmware/overlays"
 I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
+CC1200_FW_URL="https://github.com/M17-Project/CC1200_HAT-fw/releases/latest/download/CC1200_HAT-fw.bin"
 # ------------------------------------------------
 
 set -e
@@ -59,7 +60,7 @@ flash_firmware() {
     # Start with a limited list of modems and add more as people test them.
     firmware=( \
         "No option 0" \
-        "CC1200_HAT-fw/Release/CC1200_HAT-fw.bin" \
+        "CC1200 firmware is downloaded from the latest GitHub release" \
         "MMDVM_HS/release/MMDVM_HS_Hat.bin" \
         "MMDVM_HS/release/MMDVM_HS_Dual_Hat.bin" \
         "MMDVM_HS/release/generic_gpio.bin" \
@@ -83,8 +84,24 @@ flash_firmware() {
         read -rp "Enter your choice (1-8): " HW
     done
 
+    if [ "$HW" -eq 1 ]; then
+        # The CC1200 firmware binary is no longer kept in the git repository;
+        # CI builds it and attaches it to each tagged release
+        fw_file="/tmp/CC1200_HAT-fw.bin"
+        echo "📥 Downloading the latest CC1200 HAT firmware..."
+        rm -f "$fw_file"
+        if ! curl -fsSL --max-time 60 -o "$fw_file" "$CC1200_FW_URL" ||
+           [ "$(stat -c %s "$fw_file" 2>/dev/null || echo 0)" -lt 4096 ]; then
+            echo "⚠️  Could not download the CC1200 firmware, skipping flashing."
+            rm -f "$fw_file"
+            return 0
+        fi
+    else
+        fw_file="$M17_HOME/${firmware[$HW]}"
+    fi
+
     echo "⚡ Flashing firmware to HAT..."
-    stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$M17_HOME/${firmware[$HW]}" /dev/ttyAMA0
+    stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$fw_file" /dev/ttyAMA0
 }
 
 usage() {
@@ -282,16 +299,6 @@ echo "User '$M17_USER' has been added to the 'dialout' and 'gpio' groups."
 # Use a subshell to switch to m17 user
 sudo -u "$M17_USER" bash <<EOF
 set -e
-cd "$M17_HOME"
-if [ ! -d CC1200_HAT-fw ]; then
-    echo "📥 Cloning CC1200_HAT-fw..."
-    git clone https://github.com/M17-Project/CC1200_HAT-fw.git
-else
-    cd "$M17_HOME/CC1200_HAT-fw"
-    echo "📥 Updating CC1200_HAT-fw..."
-    git pull
-fi
-
 cd "$M17_HOME"
 if [ ! -d MMDVM ]; then
     echo "📥 Cloning MMDVM..."
