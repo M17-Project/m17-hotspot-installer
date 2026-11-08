@@ -34,7 +34,7 @@ At every prompt, pressing Enter picks the default, shown in capitals: `(Y/n)` me
 - Installs all necessary packages via APT
 - Creates a dedicated _m17_ user for running services
 - Clones the following M17 Project repositories:
-  - [MMDVM](https://github.com/M17-Project/MMDVM) and [MMDVM_HS](https://github.com/M17-Project/MMDVM_HS) (prebuilt MMDVM firmware)
+  - [MMDVM](https://github.com/M17-Project/MMDVM) and [MMDVM_HS](https://github.com/M17-Project/MMDVM_HS) (prebuilt MMDVM firmware; only for MMDVM HATs, and not with `-n`)
   - [rpi-dashboard](https://github.com/M17-Project/rpi-dashboard) (web interface)
 - Downloads the latest [CC1200_HAT-fw](https://github.com/M17-Project/CC1200_HAT-fw/releases) release for CC1200 HATs
 - Installs [m17-gateway](https://github.com/jancona/m17)
