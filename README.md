@@ -2,8 +2,6 @@
 
 This repository contains a Bash script to convert a Raspberry Pi (with a CC1200, SX1255 or MMDVM hat) into a fully functional **M17 digital voice hotspot**. The script automates the entire installation and setup process, including compiling the necessary software, configuring UART, setting up the web dashboard, and flashing the firmware to the HAT (optional).
 
----
-
 ## Install Script Usage
 
 Execute the following on the Raspberry Pi to download the installer:
@@ -39,8 +37,6 @@ sudo ./m17-hotspot-installer.sh
 - Script may be re-run to update software to the latest version
 - Checks for a newer version of itself on each run and offers to use it
 
----
-
 ## Tested Hardware and OS
 
 This script was tested on:
@@ -50,16 +46,12 @@ This script was tested on:
 
 Other Pi models or OS versions may work but are **not officially supported**.
 
----
-
 ## Prerequisites
 
 - Fresh install of Raspberry Pi OS Bookworm or Trixie **Lite (64-bit)**
 - Raspberry Pi with internet access
 - CC1200, SX1255 or MMDVM HAT connected
 - Run the script as **root**
-
----
 
 ## File Summary
 
@@ -68,8 +60,6 @@ Other Pi models or OS versions may work but are **not officially supported**.
 - `/opt/m17/m17-gateway/` - m17-gateway installation root
 - `/etc/m17-gateway.ini` - Gateway configuration file
 - `/boot/firmware/config.txt` - UART settings applied here
-
----
 
 ## Hotspot Usage
 
@@ -114,21 +104,14 @@ The following fields on the Gateway page may have to be changed for MMDVM:
 * Under *Modem*:
   * *Baud Rate* may need to be changed to the value the HAT supports, often `115200` for hotspots.
 
----
-
 ## Disclaimer
 
 This script makes **system-wide changes** and should **only be run on a clean install**. Do **not** use on a production system or one with existing services unless you know what you're doing.
-
----
 
 ## Support
 
 For questions or issues, please contact [M17 Project](https://m17project.org/) or open a GitHub issue in the relevant repository.
 
----
-
 ## License
 
 This script is provided as-is, under the GPL License. Contributions welcome.
-
