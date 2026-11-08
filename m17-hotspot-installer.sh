@@ -560,7 +560,9 @@ chown -R "$M17_USER:$M17_USER" "$M17_HOME"
 usermod -aG dialout,gpio "$M17_USER"
 echo "User '$M17_USER' has been added to the 'dialout' and 'gpio' groups."
 
-# Use a subshell to switch to m17 user
+# The MMDVM repositories hold only the MMDVM firmware files, so they are
+# fetched only when they can be flashed. Use a subshell to switch to m17 user.
+if [ "$HAT_TYPE" = "MMDVM" ] && [ "$flash" != n ]; then
 sudo -u "$M17_USER" bash <<EOF
 set -e
 cd "$M17_HOME"
@@ -583,6 +585,7 @@ else
     git pull
 fi
 EOF
+fi
 
 # Update the HAT firmware if there is a newer one (the SX1255 has none).
 # m17-gateway was stopped at the start.
