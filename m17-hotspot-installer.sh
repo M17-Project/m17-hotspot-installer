@@ -31,6 +31,8 @@ OVERLAYS_DIR="/boot/firmware/overlays"
 I2S_OVERLAY_URL="https://github.com/M17-Project/RaspberryPi_I2S_Slave/raw/master/genericstereoaudiocodec.dtbo"
 CC1200_FW_URL="https://github.com/M17-Project/CC1200_HAT-fw/releases/latest/download/CC1200_HAT-fw.bin"
 HAT_PORT="/dev/ttyAMA0"
+GPIO_SYSFS="/sys/class/gpio"
+DT_COMPATIBLE="/proc/device-tree/compatible"
 # ------------------------------------------------
 
 set -e
@@ -108,6 +110,9 @@ probe_hat() {
     command -v python3 > /dev/null || return 0
     grep -q "^enable_uart=1" "$BOOT_CONFIG_FILE" || return 0
     grep -q "^dtoverlay=miniuart-bt" "$BOOT_CONFIG_FILE" || return 0
+    if is_bcm2712; then
+        grep -q "^dtparam=uart0=on" "$BOOT_CONFIG_FILE" || return 0
+    fi
     [ -c "$HAT_PORT" ] || return 0
 
     out=$(timeout 15 python3 -c "$PROBE_PY" "$HAT_PORT" 2>/dev/null) || return 0
@@ -236,9 +241,41 @@ offer_flash() {
     return 1
 }
 
+# true on a Raspberry Pi 5, Pi 500 or Compute Module 5 (BCM2712). There the
+# UART on GPIO14/15 needs dtparam=uart0=on, and the 40-pin header's GPIOs
+# belong to the RP1 chip.
+is_bcm2712() {
+    grep -aq "brcm,bcm2712" "$DT_COMPATIBLE" 2>/dev/null
+}
+
+# The sysfs number of the 40-pin header's GPIO0: the base of the GPIO chip
+# behind the header. It depends on the model and the kernel (512 on recent
+# kernels for the Pi 4 and older models, other values on the Pi 5), so it is
+# looked up, never assumed.
+header_gpio_base() {
+    local chip
+    for chip in "$GPIO_SYSFS"/gpiochip*; do
+        case "$(cat "$chip/label" 2>/dev/null)" in
+            pinctrl-rp1|pinctrl-bcm2711|pinctrl-bcm2835)
+                cat "$chip/base"
+                return 0
+                ;;
+        esac
+    done
+    return 1
+}
+
 flash_file() {
+    local base boot0 nrst
+    # The HAT's BOOT0 and nRST are on header GPIO20 and GPIO21
+    if ! base=$(header_gpio_base); then
+        echo "⚠️  Could not find the GPIOs of the 40-pin header, skipping flashing."
+        return 0
+    fi
+    boot0=$((base + 20))
+    nrst=$((base + 21))
     echo "⚡ Flashing $(basename "$1") to the HAT..."
-    if ! stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$1" "$HAT_PORT"; then
+    if ! stm32flash -v -R -i "-$boot0&-$nrst&$boot0,$nrst,:-$boot0,-$nrst,$nrst" -w "$1" "$HAT_PORT"; then
         echo "⚠️  Flashing failed. Run this installer again to retry."
     fi
 }
@@ -492,6 +529,13 @@ fi
 
 if ! grep -q "^enable_uart=1" "$BOOT_CONFIG_FILE"; then
     echo "enable_uart=1" >> "$BOOT_CONFIG_FILE"
+    CONFIG_CHANGED=true
+fi
+
+# On a Pi 5, enable_uart=1 enables the debug connector's UART; the one on
+# GPIO14/15, which the HAT uses, is /dev/ttyAMA0 only with uart0 enabled
+if is_bcm2712 && ! grep -q "^dtparam=uart0=on" "$BOOT_CONFIG_FILE"; then
+    echo "dtparam=uart0=on" >> "$BOOT_CONFIG_FILE"
     CONFIG_CHANGED=true
 fi
 
