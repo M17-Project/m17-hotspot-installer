@@ -605,7 +605,10 @@ usermod -aG dialout,gpio "$M17_USER"
 echo "User '$M17_USER' has been added to the 'dialout' and 'gpio' groups."
 
 # The MMDVM repositories hold only the MMDVM firmware files, so they are
-# fetched only when they can be flashed. Use a subshell to switch to m17 user.
+# fetched only when they can be flashed. They are updated with fetch and
+# reset, not pull: there are no local changes in them to keep, and a branch
+# replaced upstream (a new history) would make pull fail. Use a subshell to
+# switch to m17 user.
 if [ "$HAT_TYPE" = "MMDVM" ] && [ "$flash" != n ]; then
 sudo -u "$M17_USER" bash <<EOF
 set -e
@@ -616,7 +619,8 @@ if [ ! -d MMDVM ]; then
 else
     cd "$M17_HOME/MMDVM"
     echo "📥 Updating MMDVM firmware..."
-    git pull
+    git fetch -q origin
+    git reset -q --hard origin/HEAD
 fi
 
 cd "$M17_HOME"
@@ -626,7 +630,8 @@ if [ ! -d MMDVM_HS ]; then
 else
     cd "$M17_HOME/MMDVM_HS"
     echo "📥 Updating MMDVM_HS firmware..."
-    git pull
+    git fetch -q origin
+    git reset -q --hard origin/HEAD
 fi
 EOF
 fi
